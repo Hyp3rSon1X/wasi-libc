@@ -260,11 +260,12 @@ struct start_args {
 	unsigned long sig_mask[_NSIG/8/sizeof(long)];
 #else
 	/*
-	 * Note: the offset of the "stack" and "tls_base" members
-	 * in this structure is hardcoded in wasi_thread_start.
+	 * Note: the offset of the "stack", "tls_base" and "stack_limit"
+	 * members in this structure is hardcoded in wasi_thread_start.
 	 */
 	void *stack;
 	void *tls_base;
+	void *stack_limit;
 	void *(*start_func)(void *);
 	void *start_arg;
 #endif
@@ -530,13 +531,18 @@ int __pthread_create(pthread_t *restrict res, const pthread_attr_t *restrict att
 
 	/* Align the stack to 16 and store it */
 	new->stack = (void *)((uintptr_t) stack & -16);
-	/* Correct the stack size */
-	new->stack_size = stack - stack_limit;
+	/* Correct the stack size, so that new->stack - new->stack_size
+	 * is the lowest usable address, stack_limit */
+	new->stack_size = (unsigned char *)new->stack - stack_limit;
 
 	args->stack = new->stack; /* just for convenience of asm trampoline */
 	args->start_func = entry;
 	args->start_arg = arg;
 	args->tls_base = (void*)new_tls_base;
+	/* wasi_thread_start stores this in the exported __stack_limit
+	 * global, so that a runtime can detect a stack overflow: the
+	 * stack is malloc'ed and nothing protects the memory below it. */
+	args->stack_limit = stack_limit;
 #endif
 
 	__tl_lock();

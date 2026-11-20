@@ -222,6 +222,14 @@ extern hidden unsigned __default_guardsize;
 #define DEFAULT_STACK_SIZE 131072
 #ifdef __wasilibc_unmodified_upstream
 #define DEFAULT_GUARD_SIZE 8192
+#elif defined(_REENTRANT)
+/* Without mprotect the guard is not protected: it is slack below the
+ * exported __stack_limit (see wasi_thread_start.s). LLVM lets leaf
+ * functions with frames of up to 128 bytes store below the stack
+ * pointer without writing __stack_pointer back, so a runtime that
+ * checks __stack_pointer against __stack_limit can miss such stores;
+ * the guard keeps them out of the heap. */
+#define DEFAULT_GUARD_SIZE 8192
 #else
 /* guard doesn't make much sense without mprotect. */
 #define DEFAULT_GUARD_SIZE 0

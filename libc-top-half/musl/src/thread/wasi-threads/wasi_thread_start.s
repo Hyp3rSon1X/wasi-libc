@@ -1,10 +1,22 @@
 	.text
 
 	.export_name	wasi_thread_start, wasi_thread_start
+	.export_name	__stack_limit, __stack_limit
 
 	.globaltype	__stack_pointer, i32
 	.globaltype	__tls_base, i32
 	.functype	__wasi_thread_start_C (i32, i32) -> ()
+
+	# The lowest valid stack pointer of the current thread, exported so
+	# that a runtime can detect an overflow of a thread's stack. A
+	# pthread's stack comes from malloc() and has no protected guard
+	# region below it, so without a limit an overflow silently runs
+	# into the heap. Zero means "no limit": the main thread, whose
+	# stack is laid out by the linker, keeps it at zero.
+	.globaltype	__stack_limit, i32
+	.hidden	__stack_limit
+	.globl	__stack_limit
+__stack_limit:
 
 	.hidden	wasi_thread_start
 	.globl	wasi_thread_start
@@ -15,6 +27,14 @@ wasi_thread_start:
 
 	# Set up the minimum C environment.
 	# Note: offsetof(start_arg, stack) == 0
+	# Note: offsetof(start_arg, stack_limit) == 8
+	# Set the limit first, so that a runtime which checks every write
+	# of __stack_pointer against __stack_limit already sees the limit
+	# of this thread when the stack pointer is set.
+	local.get   1  # start_arg
+	i32.load    8  # stack_limit
+	global.set  __stack_limit
+
 	local.get   1  # start_arg
 	i32.load    0  # stack
 	global.set  __stack_pointer

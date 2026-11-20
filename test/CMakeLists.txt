@@ -344,6 +344,8 @@ if (TARGET_TRIPLE MATCHES "-threads")
   # some extra warnings.
   add_wasilibc_test(pthread_mutex_busywait.c)
   target_compile_options(pthread_mutex_busywait.wasm PRIVATE -Wno-unused-variable)
+
+  add_wasilibc_test(pthread_stack_limit.c)
 endif()
 
 # ========= sockets-related tests ===============================
@@ -450,6 +452,8 @@ if (TARGET_TRIPLE MATCHES "-threads")
   set_tests_properties(libc_test_functional_pthread_tsd.wasm PROPERTIES LABELS v8fail)
   # "poll_oneoff" can't be implemented in the browser
   set_tests_properties(libc_test_functional_pthread_cond.wasm PROPERTIES LABELS v8fail)
+  # atomic.wait32 (pthread_join) can't be executed on the main thread
+  set_tests_properties(pthread_stack_limit.wasm PROPERTIES LABELS v8fail)
 endif()
 
 # If enabled add a copy of Python which is built against `wasi-libc` and run
